@@ -1,13 +1,5 @@
-CC = g++
-CFLAGS = -std=c++11
+Hello: Hello.cpp
+	g++ Hello.cpp -o Hello
 
-SRCS = src/Ball.cpp src/Flow.cpp src/Simulation.cpp src/Collision.cpp src/main.cpp
-OBJS = $(SRCS:.cpp=.o)
-
-all: simulation
-
-simulation: $(OBJS)
-	$(CC) $(CFLAGS) -o simulation $(OBJS)
-
-clean:
-	rm -f *.o simulation
+Balls: Main.cpp Balls.cpp Collision.cpp Configuration.cpp Flow.cpp Simulation.cpp Balls.h Collision.h Configure.h Flow.h Simulation.h 
+	g++ Balls-in-poiseuille-fluids-with-oneself-collisions.cpp -o Balls
