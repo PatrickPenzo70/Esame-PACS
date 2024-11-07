@@ -59,6 +59,7 @@
 #include <cmath>
 #include <vector>
 #include <fstream>
+#include <random> // for generating random numbers
 
 
 //Constants
@@ -69,6 +70,14 @@ const double g = 9.81;          // Gravitational acceleration
 const double dt = 0.01;         // Time step
 const double totalTime = 10.0;  // Totale simulation time
 const double N = 100;           // Number of particles
+const double k_B = 1.38e-23;	// Boltzmann constant (J/K)
+const double T = 300.0;		// Temperature (K)
+
+
+// Random number generation
+std::random_device rd;
+std::mt19937 generator(rd()); // Mersenne Twister RNG
+std::normal_distribution<double> distribution(0.0, 1.0): // Normal distribution with mean 0 and variance 1
 
 // Ball properties
 struct Ball {
@@ -108,7 +117,7 @@ void handleCollision(Ball &ball1, Ball &ball2) {
     
     double dist = sqrt(dx*dx + dy*dy);
 
-// Normal vector
+    // Normal vector
     double nx = dx / dist;
     double ny = dy / dist;
     
@@ -139,6 +148,23 @@ void handleCollision(Ball &ball1, Ball &ball2) {
     
     ball2.x += overlap * nx;
     ball2.y += overlap * ny;
+}
+
+// Generate a Brownian force for a ball
+void addBrownianForce(Ball &ball) {
+	// Diffusion coefficient D using Stokes-Einstein relation
+	double D =(k_B * T) / (6 * M_PI * mu * ball.r); 
+
+	// Standard deviation for Brownian force
+	double sigma = sqrt(2 * D / dt);
+
+	// Generate random Brownian forces (Gaussian distributed)
+	double Fx = sigma * distribution(generator);
+	double Fy = sigma * distribution(generator);
+
+	// Update velocities with Brownian force
+	ball.vx += Fx / ball.m;
+	ball.vy += Fy / ball.m;
 }
 
 
@@ -186,7 +212,7 @@ int main() {
     }
 
     // Open a file to save the positions
-    std::ofstream outFile("balls_position_collision.csv");
+    std::ofstream outFile("balls_position_collision_brownian.csv");
 
     // Check if the file is open
     if (!outFile.is_open()) {
@@ -208,6 +234,16 @@ int main() {
         for (int i = 0; i < N; ++i ) {
             updateBall(balls[i], dt);
         }
+
+	// Check for collision between balls
+	for (int i = 0; i < N; ++i) {
+	    for (int j = i + 1; j = N; ++j) {
+                if (checkCollision(balls[i], balls[j])) {
+		    handleCollision(balls[i], balls[j]);
+		}
+	    }
+	}
+
 
         // Write the current time and positions of all balls to the CSV file
         outFile << time;
