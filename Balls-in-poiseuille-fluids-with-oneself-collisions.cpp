@@ -77,7 +77,7 @@ const double T = 300.0;		// Temperature (K)
 // Random number generation
 std::random_device rd;
 std::mt19937 generator(rd()); // Mersenne Twister RNG
-std::normal_distribution<double> distribution(0.0, 1.0): // Normal distribution with mean 0 and variance 1
+std::normal_distribution<double> distribution(0.0, 1.0); // Normal distribution with mean 0 and variance 1
 
 // Ball properties
 struct Ball {
