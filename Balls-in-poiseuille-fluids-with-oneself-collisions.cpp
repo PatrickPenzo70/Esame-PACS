@@ -197,72 +197,86 @@ void updateBall(Ball &ball, double dt) {
     }
 }
 
-int main() {
-    // Initialize the balls
-    std::vector<Ball> balls(N);
+	int main() {
+	    // Initialize the balls
+	    std::vector<Ball> balls(N);
 
-    // Randomly initialize balls with different initial postions and velcoities
-    for (int i = 0; i < N; ++i) {
-        balls[i].x = 0.0;
-        balls[i].y = 0.5 -i * 0.1; // Space the balls out along the y-axis
-        balls[i].vx = 0.0;
-        balls[i].vy = 0.0;
-        balls[i].r = 0.1; // Radius of the ball
-        balls[i].m = 1.0; // Mass of the ball
-    }
-
-    // Open a file to save the positions
-    std::ofstream outFile("balls_position_collision_brownian.csv");
-
-    // Check if the file is open
-    if (!outFile.is_open()) {
-        std::cerr << "Error opening output file." << std::endl;
-        return 1;
-    }
-
-    // Write the header for the CSV file
-    outFile << "Time";
-    for (int i = 0; i < N; ++i) {
-        outFile << ", Ball_" << i + 1 << "_X, Ball" << i + 1 << "_Y, Ball";
-    }
-    outFile << std::endl;
-
-    // Simulate over time
-    double time = 0.0;
-    while (time < totalTime) {
-        // Update the position for all balls
-        for (int i = 0; i < N; ++i ) {
-            updateBall(balls[i], dt);
-        }
-
-	// Check for collision between balls
-	for (int i = 0; i < N; ++i) {
-	    for (int j = i + 1; j = N; ++j) {
-                if (checkCollision(balls[i], balls[j])) {
-		    handleCollision(balls[i], balls[j]);
-		}
+	    // Randomly initialize balls with different initial postions and velcoities
+	    for (int i = 0; i < N; ++i) {
+		balls[i].x = 0.0;
+		balls[i].y = 0.5 -i * 0.1; // Space the balls out along the y-axis
+		balls[i].vx = 0.0;
+		balls[i].vy = 0.0;
+		balls[i].r = 0.1; // Radius of the ball
+		balls[i].m = 1.0; // Mass of the ball
 	    }
+
+	 
+
+	    // Simulate over time
+	    int passo_temp = 0;
+	    double time = 0.0;
+	    while (time < totalTime) {
+	    
+	    std::cout << "t = " << time << std::endl;
+		// Update the position for all balls
+		for (int i = 0; i < N; ++i ) {
+		std::cout << " ball number i = " << i << std::endl;
+		    updateBall(balls[i], dt);
+		}
+
+		// Check for collision between balls
+		for (int i = 0; i < N; ++i) {
+		std::cout << " ball number i = " << i << std::endl;
+		    for (int j = i + 1; j < N; ++j) {
+		    std::cout << " ball number j = " << i << std::endl;
+		        if (checkCollision(balls[i], balls[j])) {
+			    handleCollision(balls[i], balls[j]);
+			}
+		    }
+		}
+		
+	    std::string move = "balls_position_collision_brownian_";
+		
+		move = move + std::to_string(passo_temp++) + ".csv";
+		
+	   // Open a file to save the positions
+	    std::ofstream outFile(move);
+
+	    // Check if the file is open
+	    if (!outFile.is_open()) {
+		std::cerr << "Error opening output file." << std::endl;
+		return 1;
+	    }
+
+	    // Write the header for the CSV file
+	    outFile << "Time";
+	
+		outFile << ", Ball_"  << "_X, Ball" << "_Y";
+	    
+	    outFile << std::endl;
+
+		// Write the current time and positions of all balls to the CSV file
+		outFile << time;
+		for (int i = 0; i < N; ++i) {
+		    outFile << ", " << balls[i].x << ", " << balls[i].y; 
+		    outFile << std::endl;
+		}
+		
+		
+		// Close the file
+	    outFile.close();
+
+		// Increase the time
+		time += dt;
+	    }
+
+	    
+	    
+	    std::cout << "Simulation completed. Particles positions saved to balls_position_collision.csv" << std::endl;
+	    
+	    return 0;
 	}
-
-
-        // Write the current time and positions of all balls to the CSV file
-        outFile << time;
-        for (int i = 0; i < N; ++i) {
-            outFile << ", " << balls[i].x << ", " << balls[i].y; 
-        }
-        outFile << std::endl;
-
-        // Increase the time
-        time += dt;
-    }
-
-    // Close the file
-    outFile.close();
-    
-    std::cout << "Simulation completed. Particles positions saved to balls_position_collision.csv" << std::endl;
-    
-    return 0;
-}
 
 
 
