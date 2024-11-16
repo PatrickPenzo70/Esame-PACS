@@ -61,244 +61,194 @@
 #include <fstream>
 #include <random> // for generating random numbers
 
+/*
+G   = 30;                  %% [kg s^-2 m^-2] head
+mu  = 1;                   %% [kg s^-1 m_1] viscosity
+h   = 1;                   %% [m] thickness
+KT  = .0001;                 %% [J] thermal energy
+r   = 1e-2;                %% [m] particle radius
+mob = 1 / 6 / pi / mu / r; %% [s kg^-1] mobility
+D   = KT * mob;            %% [m^2 s^-1] diffusivity
+Np = 2000;                 %% [-] number of particles
+dt = 1e-3;                 %% [s] time step
+T  = 300;                  %% [s] simulation tim
+g  = 0;                    %% [m s^-2] gravity
+m  = 1;                    %% [kg] particle mass
+*/
 
-//Constants
-const double U_max = 1.0;       // Maximum fluid velcosity
-const double R = 1.0;           // Pipe radius
-const double mu = 0.01;         // Dinamic viscosity of the fluid
-const double g = 9.81;          // Gravitational acceleration
-const double dt = 0.01;         // Time step
-const double totalTime = 10.0;  // Totale simulation time
-const double N = 100;           // Number of particles
-const double k_B = 1.38e-23;	// Boltzmann constant (J/K)
-const double T = 300.0;		// Temperature (K)
+/*%% fluid velocity profile
+function [vx, vy] = fluid_velocity (x, y, G, mu, h)
+  %% Stationary Couette or
+  %% plane Poiseuille flow
+  vx = G/mu/2 .* y .* (h - y);
+  vy = 0;
+endfunction */
+void fluid_velocity (double x, double y, double G, double mu, double h, double& vx, double& vy){
+ 
+ vx = G/mu/2 * y * (h - y);
+ vy = 0;
 
-
-// Random number generation
-std::random_device rd;
-std::mt19937 generator(rd()); // Mersenne Twister RNG
-std::normal_distribution<double> distribution(0.0, 1.0); // Normal distribution with mean 0 and variance 1
-
-// Ball properties
-struct Ball {
-    double x, y;            // Position of the particle
-    double vx, vy;          // Velocity of the particle
-    double r;               // Radius of the particle
-    double m;               // Mass of the particle
-};
-
-// Poiseuille flow velocity at a given y position
-double fluidVelocity(double y) {
-    return U_max * (1 - (y * y) / R*R);
-}
-
-// Drag force at a given y position on the ball
-double dragForce(double v_fluid, double v_ball, double r) {
-    return 6 * M_PI * mu * r * (v_fluid - v_ball);
-}
-
-// Distance between two particles
-double distance(const Ball &ball1, const Ball &ball2) {
-    return sqrt((ball1.x - ball2.x) * (ball1.x - ball2.x) +
-                (ball1.y - ball2.y) * (ball1.y - ball2.y));
-}
-
-// Check if two particles are colliding
-bool checkCollision(const Ball &ball1, const Ball &ball2) {
-    return distance(ball1, ball2) <= (ball1.r + ball2.r);
-}
-
-// Handle particle-particle elastic collision
-void handleCollision(Ball &ball1, Ball &ball2) {
-
-    // Vector from particle1 to particle2
-    double dx = ball2.x - ball1.x;
-    double dy = ball2.y - ball1.y;
-    
-    double dist = sqrt(dx*dx + dy*dy);
-
-    // Normal vector
-    double nx = dx / dist;
-    double ny = dy / dist;
-    
-    // Relative velocity
-    double dvx = ball1.vx - ball2.vx;
-    double dvy = ball1.vy - ball2.vy;
-    
-    // Dot product of relative velocity and normal vector
-    double dot = dvx * nx + dvy * ny;
-    
-    // Only proceed if balls are moving towards each other
-    if (dot > 0) return;
-    
-    // Compute impulse scalar
-    double impulse = (2 * dot) / (ball1.m + ball2.m);
-    
-    // Update velocities
-    ball1.vx -= impulse * ball2.m * nx;
-    ball1.vy -= impulse * ball2.m * ny;
-    
-    ball2.vx += impulse * ball1.m * nx;
-    ball2.vy += impulse * ball1.m * ny;
-    
-    // Adjust positions to avoid overlap
-    double overlap = 0.5 * (ball1.r + ball2.r - dist);
-    ball1.x -= overlap * nx;
-    ball1.y -= overlap * ny;
-    
-    ball2.x += overlap * nx;
-    ball2.y += overlap * ny;
-}
-
-// Generate a Brownian force for a ball
-void addBrownianForce(Ball &ball) {
-	// Diffusion coefficient D using Stokes-Einstein relation
-	double D =(k_B * T) / (6 * M_PI * mu * ball.r); 
-
-	// Standard deviation for Brownian force
-	double sigma = sqrt(2 * D / dt);
-
-	// Generate random Brownian forces (Gaussian distributed)
-	double Fx = sigma * distribution(generator);
-	double Fy = sigma * distribution(generator);
-
-	// Update velocities with Brownian force
-	ball.vx += Fx / ball.m;
-	ball.vy += Fy / ball.m;
 }
 
 
-// Update the position and velocity of the particle system
-void updateBall(Ball &ball, double dt) {
-    // Get fluid velocity at the ball's position
-    double v_fluid = fluidVelocity(ball.y);
 
-    // Calculate drag forces in each direction (assuming drag only in the x direction)
-    double F_drag_x = dragForce(v_fluid, ball.vx, ball.r); 
-    double F_drag_y = -dragForce(0, ball.vy, ball.r); // Drag due to vertical motion
 
-    // Newton's second law to update the velocity
-    ball.vx -= (F_drag_x / ball.m) * dt;
-    ball.vy -= (F_drag_y / ball.m - g) * dt; // Include gravity
+/*
+function [fx, fy] = particle_force (x, y, g, m)
+  fx = 0;
+  fy = -m*g;
+endfunction
 
-    // Update the position
-    ball.x += ball.vx * dt;
-    ball.y += ball.vy * dt;    
-    
-    // Bounce back if the ball hits the top or bottom of the pipe
-    if (ball.y >= R) {
-        // Ball hits the top wall, reverse y-velocity and move it inside the pipe with inelastic collisions
-        ball.vy = -0.9*ball.vy;
-        ball.y = -R - (ball.y - R); // Adjust position to avoid getting stuck
-    }  else if (ball.y <= -R) {
-        // Ball hits the bottom wall, reverse y-velocity and move it inside the pipe with inelastic collisions
-        ball.vy = -0.9*ball.vy;
-        ball.y = - R - (ball.y + R); // Adjust position to avoid getting stuck
+*/
+
+void particle_force (double x, double y, double g, double m, double& fx, double& fy){
+
+  fx = 0;
+  fy = -m*g;
+  
+}
+
+
+void save_particle_data(std::ofstream& file, double T, const std::vector<double>& x, const std::vector<double>& y) {
+    for (size_t i = 0; i < x.size(); ++i) {
+        file << T << "," << x[i] << "," << y[i] << "\n";
     }
 }
 
-	int main() {
-	    // Initialize the balls
-	    std::vector<Ball> balls(N);
-
-	    // Randomly initialize balls with different initial postions and velcoities
-	    for (int i = 0; i < N; ++i) {
-		balls[i].x = 0.0;
-		balls[i].y = 0.5 -i * 0.1; // Space the balls out along the y-axis
-		balls[i].vx = 0.0;
-		balls[i].vy = 0.0;
-		balls[i].r = 0.1; // Radius of the ball
-		balls[i].m = 1.0; // Mass of the ball
-	    }
-
-	 
-
-	    // Simulate over time
-	    int passo_temp = 0;
-	    double time = 0.0;
-	    while (time < totalTime) {
-	    
-	    std::cout << "t = " << time << std::endl;
-		// Update the position for all balls
-		for (int i = 0; i < N; ++i ) {
-		std::cout << " ball number i = " << i << std::endl;
-		    updateBall(balls[i], dt);
-		}
-
-		// Check for collision between balls
-		for (int i = 0; i < N; ++i) {
-		std::cout << " ball number i = " << i << std::endl;
-		    for (int j = i + 1; j < N; ++j) {
-		    std::cout << " ball number j = " << i << std::endl;
-		        if (checkCollision(balls[i], balls[j])) {
-			    handleCollision(balls[i], balls[j]);
-			}
-		    }
-		}
-		
-	    std::string move = "balls_position_collision_brownian_";
-		
-		move = move + std::to_string(passo_temp++) + ".csv";
-		
-	   // Open a file to save the positions
-	    std::ofstream outFile(move);
-
-	    // Check if the file is open
-	    if (!outFile.is_open()) {
-		std::cerr << "Error opening output file." << std::endl;
-		return 1;
-	    }
-
-	    // Write the header for the CSV file
-	    outFile << "Time";
-	
-		outFile << ", Ball_"  << "_X, Ball" << "_Y";
-	    
-	    outFile << std::endl;
-
-		// Write the current time and positions of all balls to the CSV file
-		outFile << time;
-		for (int i = 0; i < N; ++i) {
-		    outFile << ", " << balls[i].x << ", " << balls[i].y; 
-		    outFile << std::endl;
-		}
-		
-		
-		// Close the file
-	    outFile.close();
-
-		// Increase the time
-		time += dt;
-	    }
-
-	    
-	    
-	    std::cout << "Simulation completed. Particles positions saved to balls_position_collision.csv" << std::endl;
-	    
-	    return 0;
-	}
 
 
+int main() {
 
-// DEFINITIONS:
+double G   = 30;                  // [kg s^-2 m^-2] head
+double mu  = 1;                   // [kg s^-1 m_1] viscosity
+double h   = 1;                   // [m] thickness
+double KT  = .0001;               // [J] thermal energy
+double r   = 1e-2;                // [m] particle radius
+double mob = 1 / 6 / M_PI / mu / r; // [s kg^-1] mobility
+double D   = KT * mob;            // [m^2 s^-1] diffusivity
+int Np = 2000;                    // [-] number of particles
+double dt = 1e-3;                 // [s] time step
+double T  = 1.0;                  // [s] simulation time
+double g  = 0;                    // [m s^-2] gravity
+double m  = 1;                    // [kg] particle mass
 
-// fluidVelocity(): Defines the velocity of the fluid as a function of the particle's y position, using
-// the parabolic profile for Poiseuille flow.
+/*
+x  = randn (Np, 1) * 10;
+y  = randn (Np, 1)/8 + 0.5;
+*/
 
-// dragForce(): Calculates the drag force based on the difference  between the fluid's velocity and the
-// particle's velocity.
+std::vector<double> x (Np);
+std::vector<double> y (Np);
+std::vector<double> vx (Np);
+std::vector<double> vy (Np);
+std::vector<double> fx (Np);
+std::vector<double> fy (Np);
+std::vector<double> dxb (Np);
+std::vector<double> dyb (Np);
 
-// updateBall(): Updates the particle's position and velocity using the drag force and gravity, and
-// advances the position by one time step.
 
-// Collision Detection: The collision is detected by checking if the y-position of the ball exceeds 
-// the pipe's boundaries, i.e., if y ≥ R (top wall) or y ≤ −R (bottom wall).
+ std::random_device rd;  // Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_real_distribution<> disx(0.0, 0.1);
+    for (int n = 0; n < Np; ++n) {  
+        x[n]=disx(gen);
+    }
+    std::uniform_real_distribution<> disy(0.0, 0.1);
+    for (int n = 0; n < Np; ++n) {  
+        y[n]=disy(gen);
+    }
+        
 
-// Bounce-back Mechanism: When the balls hit a wall, I reverse its velocity in the y-direction: 
-// ball.vy = -ball.vy. After reversing the velocity, I adjust the position so that the ball is placed 
-// slightly inside the wall. This adjustment prevents the balls from being stuck inside the wall 
-// due to numerical errors: 
 
-// ball.y = R - (ball.y - R);  // For top wall
-// ball.y = -R - (ball.y + R); // For bottom wall
+/*
+Nt = ceil (T/dt);
+t  = 0;
+iff = 0;
+*/
 
+int Nt;
+
+Nt = std::ceil (T/dt);
+
+double t = 0;
+
+int iff = 0;
+
+/*
+for it = 1 : Nt
+
+  [vx, vy] = fluid_velocity (x, y, G, mu, h);
+  [fx, fy] = particle_force (x, y, g, m);
+  
+  dxb = randn (Np, 2) * sqrt (2*D*dt);
+  x = x + (vx + mob*fx) * dt + dxb(:, 1);
+  y = y + (vy + mob*fy) * dt + dxb(:, 2);
+
+  %% upper and lower (unelastic) wall conditions
+  y = min (h, max (0, y));
+  t = t + dt;
+
+if (mod (it, Nt/100) == 1)
+    figure(1)
+    plot (x, y, 'ko')
+    axis ([-10, 250, 0, 1])
+    print ("-dpng", sprintf("frames/f_%3.3d.png", iff++))
+   drawnow
+  endif
+endfor
+*/
+
+
+std::random_device rd2;  // Will be used to obtain a seed for the random number engine
+    std::mt19937 gen2(rd2()); // Standard mersenne_twister_engine seeded with rd()
+    std::normal_distribution<> disbrownian(0.0, std::sqrt (2*D*dt));
+    
+
+  for (int it = 0; it<Nt; ++it){
+  
+    for (int n = 0; n < Np; ++n){
+  
+      fluid_velocity (x[n], y[n], G, mu, h, vx[n], vy[n]);
+      particle_force (x[n], y[n], g, m, fx[n], fy[n]);
+  
+ 
+      //std::normal_distribution<> disbrownian(0.0, std::sqrt (2*D*dt));
+      
+      dxb[n]=disbrownian(gen2);
+      dyb[n]=disbrownian(gen2);
+ 
+ 
+      x[n] = x[n] + (vx[n] + mob*fx[n]) * dt + dxb[n];
+      y[n] = y[n] + (vy[n] + mob*fy[n]) * dt + dyb[n];
+  
+      // upper and lower (unelastic) wall conditions
+      y[n] = std::min (h, std::max (0.0, y[n]));
+      
+     
+      }
+   
+   
+   // Open CSV file
+    std::ofstream file("particle_positions.csv");
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for writing.\n";
+        return 1;
+    }
+   
+   // Write header for CSV file
+    file << "time,x,y\n";
+   
+   
+   // Save current positions and time to the file
+        save_particle_data(file, t, x, y);
+   
+   
+   
+      t = t + dt;
+  
+    }
+
+  
+
+return 0;
+}
