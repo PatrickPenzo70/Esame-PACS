@@ -60,6 +60,10 @@
 #include <vector>
 #include <fstream>
 #include <random> // for generating random numbers
+#include <iomanip>
+#include <algorithm>
+
+
 
 /*
 G   = 30;                  %% [kg s^-2 m^-2] head
@@ -83,6 +87,9 @@ function [vx, vy] = fluid_velocity (x, y, G, mu, h)
   vx = G/mu/2 .* y .* (h - y);
   vy = 0;
 endfunction */
+
+// Function to calculate fluid velocity
+
 void fluid_velocity (double x, double y, double G, double mu, double h, double& vx, double& vy){
  
  vx = G/mu/2 * y * (h - y);
@@ -101,6 +108,9 @@ endfunction
 
 */
 
+
+// Function to calculate particle force
+
 void particle_force (double x, double y, double g, double m, double& fx, double& fy){
 
   fx = 0;
@@ -109,28 +119,23 @@ void particle_force (double x, double y, double g, double m, double& fx, double&
 }
 
 
-void save_particle_data(std::ofstream& file, double T, const std::vector<double>& x, const std::vector<double>& y) {
-    for (size_t i = 0; i < x.size(); ++i) {
-        file << T << "," << x[i] << "," << y[i] << "\n";
-    }
-}
 
 
 
 int main() {
 
-double G   = 30;                  // [kg s^-2 m^-2] head
-double mu  = 1;                   // [kg s^-1 m_1] viscosity
-double h   = 1;                   // [m] thickness
-double KT  = .0001;               // [J] thermal energy
-double r   = 1e-2;                // [m] particle radius
-double mob = 1 / 6 / M_PI / mu / r; // [s kg^-1] mobility
-double D   = KT * mob;            // [m^2 s^-1] diffusivity
-int Np = 2000;                    // [-] number of particles
-double dt = 1e-3;                 // [s] time step
-double T  = 1.0;                  // [s] simulation time
-double g  = 0;                    // [m s^-2] gravity
-double m  = 1;                    // [kg] particle mass
+double 	G   = 30;                  	// [kg s^-2 m^-2] head
+double 	mu  = 1;                   	// [kg s^-1 m_1] viscosity
+double 	h   = 1;                   	// [m] thickness
+double 	KT  = .0001;               	// [J] thermal energy
+double 	r   = 1e-2;                	// [m] particle radius
+double 	mob = 1 / 6 / M_PI / mu / r; 	// [s kg^-1] mobility
+double 	D   = KT * mob;            	// [m^2 s^-1] diffusivity
+int 	Np = 2000;                    	// [-] number of particles
+double 	dt = 1e-2;                 	// [s] time step
+double 	T  = 1.0;                  	// [s] simulation time
+double 	g  = 0;                    	// [m s^-2] gravity
+double 	m  = 1;                    	// [kg] particle mass
 
 /*
 x  = randn (Np, 1) * 10;
@@ -158,6 +163,18 @@ std::vector<double> dyb (Np);
         y[n]=disy(gen);
     }
         
+
+// Open the CSV file for saving data
+    std::ofstream file("particle_positions.csv");
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for writing.\n";
+        return 1;
+    }
+
+
+   // Write the CSV header
+    file << "time,x,y\n";
+
 
 
 /*
@@ -188,14 +205,6 @@ for it = 1 : Nt
   y = min (h, max (0, y));
   t = t + dt;
 
-if (mod (it, Nt/100) == 1)
-    figure(1)
-    plot (x, y, 'ko')
-    axis ([-10, 250, 0, 1])
-    print ("-dpng", sprintf("frames/f_%3.3d.png", iff++))
-   drawnow
-  endif
-endfor
 */
 
 
@@ -227,28 +236,57 @@ std::random_device rd2;  // Will be used to obtain a seed for the random number 
      
       }
    
+   /*
    
-   // Open CSV file
-    std::ofstream file("particle_positions.csv");
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file for writing.\n";
-        return 1;
-    }
+   if (mod (it, Nt/100) == 1)
+    figure(1)
+    plot (x, y, 'ko')
+    axis ([-10, 250, 0, 1])
+    print ("-dpng", sprintf("frames/f_%3.3d.png", iff++))
+   drawnow
+  endif
+endfor
+*/
+
+     std::string move = "particle_position_";
+     
+     move = move + std::to_string(iff++) + ".csv";
+
+     // Open a file to save the positions
+	    std::ofstream outFile(move);
+     
+     // Check if the file is open
+	    if (!outFile.is_open()) {
+		std::cerr << "Error opening output file." << std::endl;
+		return 1;
+	    }
+
+
+     // Write the header for the CSV file
+	    outFile << "Time";
+	
+		outFile << ", Ball"  << "_X, Ball" << "_Y";
+	    
+	    outFile << std::endl;
+
+
    
-   // Write header for CSV file
-    file << "time,x,y\n";
+ /*  std::string file_temp = "frames/f_%3.3d.png"
+   std::cout << file_temp << '\n'; 
    
+   ofstream myfile;
+   myfile.open ("example.txt");
+   myfile << "Writing this to a file.\n";
+   myfile.close();
    
-   // Save current positions and time to the file
-        save_particle_data(file, t, x, y);
-   
-   
+	*/
    
       t = t + dt;
   
     }
 
-  
-
+    file.close();
+        std::cout << "Simulation complete. Data saved to particle_positions.csv.\n";
+ 
 return 0;
 }
