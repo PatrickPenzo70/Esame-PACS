@@ -248,12 +248,12 @@ std::random_device rd2;  // Will be used to obtain a seed for the random number 
 endfor
 */
 
-     std::string move = "particle_position_";
+     std::string particle_move = "particle_position_";
      
-     move = move + std::to_string(iff++) + ".csv";
+     particle_move = particle_move + std::to_string(iff++) + ".csv";
 
      // Open a file to save the positions
-	    std::ofstream outFile(move);
+	    std::ofstream outFile(particle_move);
      
      // Check if the file is open
 	    if (!outFile.is_open()) {
