@@ -155,11 +155,11 @@ std::vector<double> dyb (Np);
  std::random_device rd;  // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
     std::uniform_real_distribution<> disx(0.0, 0.1);
+    std::uniform_real_distribution<> disy(0.0, 0.1);
+    
+    // initialize particle positions
     for (int n = 0; n < Np; ++n) {  
         x[n]=disx(gen);
-    }
-    std::uniform_real_distribution<> disy(0.0, 0.1);
-    for (int n = 0; n < Np; ++n) {  
         y[n]=disy(gen);
     }
         
@@ -172,7 +172,7 @@ std::vector<double> dyb (Np);
     }
 
 
-   // Write the CSV header
+   // Write the CSV header (only once)
     file << "time,x,y\n";
 
 
@@ -183,13 +183,13 @@ t  = 0;
 iff = 0;
 */
 
-int Nt;
+//Calculate the number of time steps
 
-Nt = std::ceil (T/dt);
+int Nt = std::ceil(T/dt);
 
-double t = 0;
+double t = 0; //initial time
 
-int iff = 0;
+int iff = 0;// File index
 
 /*
 for it = 1 : Nt
@@ -209,33 +209,61 @@ for it = 1 : Nt
 
 
 std::random_device rd2;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen2(rd2()); // Standard mersenne_twister_engine seeded with rd()
-    std::normal_distribution<> disbrownian(0.0, std::sqrt (2*D*dt));
+std::mt19937 gen2(rd2()); // Standard mersenne_twister_engine seeded with rd()
+std::normal_distribution<> disbrownian(0.0, std::sqrt (2*D*dt));
     
+
+//Main simulation loop
 
   for (int it = 0; it<Nt; ++it){
   
+  //Create a new CSV file for each time step
+  
+  std::string particle_move = "particle_position_" + std::to_string(iff++) + ".csv";
+  
+  // Open a file to save the positions
+  
+  std::ofstream outFile(particle_move);
+  
+  // Check if the file is open
+	 if (!outFile.is_open()) {
+	    std::cerr << "Error opening output file." << std::endl;
+	    return 1;
+	 }
+  
+  // Write the header for the CSV file
+	 outFile << "Time, Ball_X, Ball_Y \n";
+  
+  // Loop over all particles
+ 
+  
     for (int n = 0; n < Np; ++n){
+  
+  // Compute fluid velocity and forces
   
       fluid_velocity (x[n], y[n], G, mu, h, vx[n], vy[n]);
       particle_force (x[n], y[n], g, m, fx[n], fy[n]);
   
- 
+      //Brownian motion displacements
       //std::normal_distribution<> disbrownian(0.0, std::sqrt (2*D*dt));
       
       dxb[n]=disbrownian(gen2);
       dyb[n]=disbrownian(gen2);
  
+      //update particles positions
  
       x[n] = x[n] + (vx[n] + mob*fx[n]) * dt + dxb[n];
       y[n] = y[n] + (vy[n] + mob*fy[n]) * dt + dyb[n];
   
-      // upper and lower (unelastic) wall conditions
+  
+      // Apply boundary conditions (elastic walls)
       y[n] = std::min (h, std::max (0.0, y[n]));
       
-     
+      // Write particle position and time to the output file    
+      outFile << t << "," << x[n] << "," << y[n] << "\n"; 
+    
       }
-   
+      
    /*
    
    if (mod (it, Nt/100) == 1)
@@ -248,29 +276,6 @@ std::random_device rd2;  // Will be used to obtain a seed for the random number 
 endfor
 */
 
-     std::string particle_move = "particle_position_";
-     
-     particle_move = particle_move + std::to_string(iff++) + ".csv";
-
-     // Open a file to save the positions
-	    std::ofstream outFile(particle_move);
-     
-     // Check if the file is open
-	    if (!outFile.is_open()) {
-		std::cerr << "Error opening output file." << std::endl;
-		return 1;
-	    }
-
-
-     // Write the header for the CSV file
-	    outFile << "Time";
-	
-		outFile << ", Ball"  << "_X, Ball" << "_Y";
-	    
-	    outFile << std::endl;
-
-
-   
  /*  std::string file_temp = "frames/f_%3.3d.png"
    std::cout << file_temp << '\n'; 
    
@@ -281,12 +286,20 @@ endfor
    
 	*/
    
-      t = t + dt;
+   
+   //Update time
+      t += dt;
+  
+   //Close the time-step-specific file 
+    outFile.close();
   
     }
 
+   //Close the main output file
+
     file.close();
-        std::cout << "Simulation complete. Data saved to particle_positions.csv.\n";
+    
+    std::cout << "Simulation complete. Data saved to particle_positions.csv.\n";
  
 return 0;
 }
