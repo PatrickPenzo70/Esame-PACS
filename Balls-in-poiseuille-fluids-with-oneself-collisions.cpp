@@ -219,7 +219,10 @@ std::normal_distribution<> disbrownian(0.0, std::sqrt (2*D*dt));
   
   //Create a new CSV file for each time step
   
-  std::string particle_move = "particle_position_" + std::to_string(iff++) + ".csv";
+  // std::string particle_move = "particle_position_" + std::to_string(iff++) + ".csv";
+  auto particle_move_n = std::to_string(iff++);
+  std::string particle_move = "particle_position_00000.csv";
+  particle_move.replace (23-particle_move_n.length (), particle_move_n.length (), particle_move_n);
   
   // Open a file to save the positions
   
