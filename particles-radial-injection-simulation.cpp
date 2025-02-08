@@ -1,26 +1,51 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <unordered_map>
 #include <cmath>
 #include <vector>
-#include <fstream>
 #include <random> // for generating random numbers
-#include <iomanip>
 #include <algorithm>
 
-const double    v_avg = 1000;                           // [m s^-1] average velocity
-const double 	mu   = 1;                   	        // [kg s^-1 m_1] viscosity
-const double 	H    = 1.0;                   	        // [m] thickness
-const double 	KT   = .02;               	        // [J] thermal energy
-const double 	r    = 1e-2;                	        // [m] particle radius
-const double 	mob  = 1. / 6. / M_PI / mu / r; 	// [s kg^-1] mobility
-const double 	D    = KT * mob;            	        // [m^2 s^-1] diffusivity
-const int 	Np   = 2000;                    	// [-] number of particles
-const double 	dt   = 1e-2;                 	        // [s] time step
-const double 	T    = 1.0;                  	        // [s] simulation time
-const double 	g    = 9.81;                    	// [m s^-2] gravity
-const double 	m    = 0.001;                    	// [kg] particle mass
-const double    pi = 3.14;
-const double    sigma = 1.0;                            // Variance of the initial Gaussian distribution
+//const double    v_avg = 1000;                           // [m s^-1] average velocity
+//const double 	mu   = 1;                   	        // [kg s^-1 m_1] viscosity
+//const double 	H    = 1.0;                   	        // [m] thickness
+//const double 	KT   = .02;               	        // [J] thermal energy
+//const double 	r    = 1e-2;                	        // [m] particle radius
+//const double 	mob  = 1. / 6. / M_PI / mu / r; 	// [s kg^-1] mobility
+//const double 	D    = KT * mob;            	        // [m^2 s^-1] diffusivity
+//const int 	Np   = 2000;                    	// [-] number of particles
+//const double 	dt   = 1e-2;                 	        // [s] time step
+//const double 	T    = 1.0;                  	        // [s] simulation time
+//const double 	g    = 9.81;                    	// [m s^-2] gravity
+//const double 	m    = 0.001;                    	// [kg] particle mass
+//const double    pi = 3.14;
+//const double    sigma = 1.0;                            // Variance of the initial Gaussian distribution
 
+// Function to read simulation parameters from CSV file
+bool readParameters(const std::string& filename, std::unordered_map<std::string, double>& params) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file " << filename << "\n";
+        return false;
+    }
+
+    std::string line, key;
+    double value;
+
+// Skip header
+    std::getline(file, line);
+
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        if (std::getline(ss, key, ',') && ss >> value) {
+            params[key] = value;
+        }
+    }
+
+    file.close();
+    return true;
+}
 
 // Function to calculate fluid velocity
 
@@ -38,6 +63,34 @@ void particle_force (double x, double y, double g, double m, double& fx, double&
 }
 
 int main() {
+
+std::unordered_map<std::string, double> params;
+
+    // Read parameters from CSV file
+    if (!readParameters("Data.csv", params)) {
+        return 1;
+    }
+
+// Assign values from the map
+
+    double v_avg = params["v_avg"];
+    int Np = static_cast<int>(params["Np"]);
+    double dt = params["dt"];
+    double T = params["T"];
+    double g = params["g"];
+    double m = params["m"];
+    double H = params["H"];
+    double KT = params["KT"];
+    double r = params["r"];
+    double sigma = params["sigma"];
+    double mu = params["mu"];
+    
+    double mob = 1.0 / (6.0 * M_PI * mu * r);
+    double D = KT * mob;
+    int Nt = std::ceil(T / dt);
+
+
+
 
 std::vector<double> x (Np);
 std::vector<double> y (Np);
@@ -61,19 +114,19 @@ std::vector<double> dyb (Np);
         y[n] = uniform(gen) + 0.5;              // All particles start at y = 0,5
     }
         
-// Open the CSV file for saving data
+    // Open the CSV file for saving data
     std::ofstream file("particle_positions.csv");
     if (!file.is_open()) {
         std::cerr << "Failed to open file for writing.\n";
         return 1;
     }
 
-   // Write the CSV header (only once)
+    // Write the CSV header (only once)
     file << "time,x,y\n";
 
 //Calculate the number of time steps
 
-int Nt = std::ceil(T/dt);
+//int Nt = std::ceil(T/dt);
 double t = 0; //initial time
 int iff = 0;// File index
 
