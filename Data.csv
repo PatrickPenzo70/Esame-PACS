@@ -10,3 +10,7 @@ T,1.00
 g,9.81
 m,0.00
 sigma,1.00
+width,0.10
+height,0.10
+size_x,10.00
+size_y,10.00
