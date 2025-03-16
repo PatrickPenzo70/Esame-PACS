@@ -12,6 +12,7 @@
 #include "counter.h"       // This is a custom header file for range counting
 
 
+
 // This function reads a CSV file and stores parameters in a map (unordered_map):
 // File handling: It opens the CSV file, reads each line, and splits it into key-value pairs (parameter name and value).
 // Error handling: If the file cannot be opened, it prints an error message and returns false.
@@ -39,8 +40,6 @@ bool readParameters(const std::string& filename, std::unordered_map<std::string,
     file.close();
     return true;
 }
-
-
 
 // QuadGrid class to efficiently manage particle positions in a Cartesian grid
 // QuadGrid class:
@@ -75,11 +74,12 @@ public:
     }
 };
 
+
 // Function to calculate fluid velocity at a given position (x, y): it computes the velocity vx based on the position of the particle relative to the height H and the average fluid velocity v_avg.
 
 void fluid_velocity (double x, double y, double v_avg, double mu, double H, double& vx, double& vy){
  
- vx = 0.5 * v_avg * (1 - (y * y) / (H * H)); // Velocity decreases with y^2
+ vx = 1.5 * v_avg * (1 - y*y/(H*H)); // Velocity decreases with y^2
  vy = 0; // There is no velocity component in the y-direction
 }
 
@@ -131,8 +131,8 @@ public:
     x[n] += (vx + mob*fx) * dt + dxb;
     y[n] += (vy + mob*fy) * dt + dyb;
   
-    // Apply boundary conditions (elastic walls)
-    y[n] = std::clamp(y[n], 0.0, H);
+     // Apply boundary conditions (elastic walls)
+    y[n] = std::clamp(y[n], -H, H);
    }; 
 
    void save(const std::string &filename) const {
@@ -156,6 +156,7 @@ public:
     outFile.close();
    }
   };
+
 
 // Main Function:
 // Parameter reading: Reads simulation parameters from a CSV file using readParameters.
@@ -188,13 +189,14 @@ int main() {
     double r = params["r"];
     double sigma = params["sigma"];
     double mu = params["mu"];
-    double mob = 1.0 / (6.0 * M_PI * mu * r);
+    double mob = 1.0;
     double D = KT * mob;
     int Nt = std::ceil(T / dt);
     int size_x = params["size_x"];
     int size_y = params["size_y"];
     double width = params["width"];
     double height = params["height"];
+    
 
     std::vector<double> x (Np);
     std::vector<double> y (Np);
@@ -203,21 +205,22 @@ int main() {
     // Initialize particle positions randomly
     std::random_device rd;  // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<> uniform(0.0, 1.0); 
+    std::normal_distribution<> normal_x(0.0, 1.0); // Mean = 0, Std Dev = 1
+    std::uniform_real_distribution<> uniform_y(0.0, 0.125); // y in [0.5, 0.625]
+    
    
     for (int n = 0; n < Np; ++n) {  
-        x[n] = uniform(gen) * 1.;  		// Gaussian-distributed x values
-        y[n] = uniform(gen)/8. + .5;            // All particles start at y = 0,5
+        x[n] = normal_x(gen);  	        // Gaussian-distributed x values
+        y[n] = uniform_y(gen);            // All particles start at y = 0,5
     }
         
     // Brownian motion noise function
         
     std::random_device rd2;  // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen2(rd2()); // Standard mersenne_twister_engine seeded with rd()
-    std::normal_distribution<> normal;    
+    std::mt19937 gen2(rd2()); // Standard mersenne_twister_engine seeded with rd() 
     
-    std::function<double ()> noise = [&gen2, &rd2, &normal] (){
-         return normal(gen2);
+    std::function<double ()> noise = [&gen2, &normal_x] (){
+         return normal_x(gen2);
     };
 
     stepper state (x, y, v_avg, mu, H, KT, r, mob, D, dt, g, m, noise);
@@ -225,7 +228,7 @@ int main() {
     QuadGrid grid(size_x, size_y, width, height);
     
     
-     // Main simulation loop
+      // Main simulation loop
     
     for (int it = 0; it < Nt; ++it) {
         grid.clear();
@@ -243,12 +246,12 @@ int main() {
     bool printframe = false;
     std::ofstream outFile;
     for (int it = 0; it<Nt; ++it){
-    
+
     // Loop over all particles
     std::for_each (std::execution::par, counter.begin (), counter.end (), state);
     
     printframe = false;
-    if ((it % 1000) == 0) printframe = true;
+    if ((it % 20) == 0) printframe = true;
     
     
     if (printframe) {
@@ -266,3 +269,7 @@ int main() {
     std::cout << "Simulation complete. Data saved to particle_positions.csv.\n";
     return 0;
    }
+   
+   
+   
+   
