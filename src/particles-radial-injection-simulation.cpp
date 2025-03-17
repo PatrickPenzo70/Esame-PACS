@@ -6,21 +6,7 @@
 #include <vector>
 #include <random> // for generating random numbers
 #include <algorithm>
-
-//const double    v_avg = 1000;                           // [m s^-1] average velocity
-//const double 	mu   = 1;                   	        // [kg s^-1 m_1] viscosity
-//const double 	H    = 1.0;                   	        // [m] thickness
-//const double 	KT   = .02;               	        // [J] thermal energy
-//const double 	r    = 1e-2;                	        // [m] particle radius
-//const double 	mob  = 1. / 6. / M_PI / mu / r; 	// [s kg^-1] mobility
-//const double 	D    = KT * mob;            	        // [m^2 s^-1] diffusivity
-//const int 	Np   = 2000;                    	// [-] number of particles
-//const double 	dt   = 1e-2;                 	        // [s] time step
-//const double 	T    = 1.0;                  	        // [s] simulation time
-//const double 	g    = 9.81;                    	// [m s^-2] gravity
-//const double 	m    = 0.001;                    	// [kg] particle mass
-//const double    pi = 3.14;
-//const double    sigma = 1.0;                            // Variance of the initial Gaussian distribution
+#include <quadgrid_cpp.h>
 
 // Function to read simulation parameters from CSV file
 bool readParameters(const std::string& filename, std::unordered_map<std::string, double>& params) {
