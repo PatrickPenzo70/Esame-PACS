@@ -4,3 +4,9 @@
 [submodule "json"]
 	path = json
 	url = git@github.com:nlohmann/json.git
+[submodule "cdf_timer"]
+	path = cdf_timer
+	url = git@github.com:carlodefalco/cdf_timer.git
+[submodule "timer"]
+	path = timer
+	url = git@github.com:carlodefalco/cdf_timer.git
